@@ -9,6 +9,8 @@ import java.util.List;
 import org.apache.pdfbox.multipdf.PDFMergerUtility;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 
 import javax.swing.*;
 import javax.swing.filechooser.FileFilter;
@@ -22,6 +24,39 @@ public class Main extends JFrame {
     private JButton mergeSplitButton;
     private String path;
     private Integer type;
+
+    public void jpegToPdf(String inputJpegPath, String outputPdfPath) {
+        try {
+            // Create a new PDF document
+            PDDocument document = new PDDocument();
+
+            // Create a new page and add it to the document
+            PDPage page = new PDPage();
+            document.addPage(page);
+
+            // Create a PDImageXObject from the input JPEG file
+            PDImageXObject image = PDImageXObject.createFromFile(inputJpegPath, document);
+
+            // Create a content stream to write the image to the page
+            PDPageContentStream contentStream = new PDPageContentStream(document, page);
+
+            // Draw the image on the page
+            float pageWidth = page.getMediaBox().getWidth();
+            float pageHeight = page.getMediaBox().getHeight();
+            contentStream.drawImage(image, 0, 0, pageWidth, pageHeight);
+
+            // Close the content stream
+            contentStream.close();
+
+            // Save the document to the output PDF file
+            document.save(outputPdfPath);
+
+            // Close the document
+            document.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
 
     private void createRadioButtons () {
