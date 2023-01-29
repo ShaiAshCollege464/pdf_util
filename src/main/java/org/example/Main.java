@@ -24,6 +24,7 @@ public class Main extends JFrame {
     private JButton mergeSplitButton;
     private String path;
     private Integer type;
+    private JDialog dialog;
 
     public void jpegToPdf(String inputJpegPath, String outputPdfPath) {
         try {
@@ -173,7 +174,7 @@ public class Main extends JFrame {
     public void selectFile () {
         JFileChooser chooser = new JFileChooser();
         chooser.setCurrentDirectory(new File(CHOOSE_FILE_DEFAULT_FOLDER));
-        FileFilter filter = new FileNameExtensionFilter("PDF Files", "pdf");
+        FileFilter filter = new FileNameExtensionFilter("PDF Files", "pdf", "jpg", "jpeg");
         chooser.setFileFilter(filter);
         chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
         int returnVal = chooser.showOpenDialog(new JFrame());
@@ -199,7 +200,7 @@ public class Main extends JFrame {
             allFiles = dirFile.listFiles();
             if (allFiles != null) {
                 allFiles = Arrays.stream(allFiles)
-                        .filter(file -> file.getName().endsWith(".pdf"))
+                        .filter(file -> file.getName().endsWith(".pdf") || file.getName().endsWith(".jpeg") || file.getName().endsWith(".jpg"))
                         .toArray(File[]::new);
             }
         }
@@ -240,7 +241,7 @@ public class Main extends JFrame {
                 pageDocument.close();
             }
             document.close();
-            test(resultFolder.getAbsolutePath());
+            openFolder(resultFolder.getAbsolutePath());
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -257,28 +258,58 @@ public class Main extends JFrame {
                 }
             }
             merger.setDestinationFileName(outputFolder + String.format("\\merged_%d.pdf", System.currentTimeMillis()));
+            List<String> tempFiles = new ArrayList<>();
             for (String inputFilePath : inputFilePaths) {
-                merger.addSource(inputFilePath);
+                if (!checkFileExtension(inputFilePath, "pdf")) {
+                    if (checkFileExtension(inputFilePath, "jpeg") || checkFileExtension(inputFilePath, "jpg")) {
+                        String newPath = replaceFileExtension(inputFilePath, ".pdf");
+                        jpegToPdf(inputFilePath, newPath);
+                        merger.addSource(newPath);
+                        tempFiles.add(newPath);
+                    }
+                } else {
+                    merger.addSource(inputFilePath);
+                }
             }
-            test(outputFolder);
             merger.mergeDocuments(null);
+            System.out.println("DONE!");
+            for (String file : tempFiles) {
+                new File(file).delete();
+            }
+            openFolder(outputFolder);
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    private void test (String folderToOpen) {
+    private void openFolder(String folderToOpen) {
         JButton openFolder = new JButton("Open Folder");
         openFolder.addActionListener(e -> {
             try {
                 Desktop.getDesktop().open(new File(folderToOpen));
-
+                dialog.dispose();
+                dialog.setVisible(false);
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
         });
         this.mergeSplitButton.setEnabled(false);
-        JOptionPane.showOptionDialog(this, "The folder is located at "+folderToOpen, "Folder location", JOptionPane.DEFAULT_OPTION, JOptionPane.INFORMATION_MESSAGE, null, new Object[]{openFolder}, openFolder);
-
+        JOptionPane optionPane = new JOptionPane("The folder is located at " + folderToOpen, JOptionPane.INFORMATION_MESSAGE, JOptionPane.DEFAULT_OPTION, null, new Object[]{openFolder}, openFolder);
+        dialog = optionPane.createDialog(this, "Folder location");
+        dialog.setVisible(true);
     }
+
+    public static boolean checkFileExtension(String fileName, String extension) {
+        return fileName.endsWith(extension);
+    }
+
+    public static String replaceFileExtension(String fileName, String newExtension) {
+        int dotIndex = fileName.lastIndexOf(".");
+        if (dotIndex != -1) {
+            return fileName.substring(0, dotIndex) + newExtension;
+        } else {
+            return fileName + newExtension;
+        }
+    }
+
 }
