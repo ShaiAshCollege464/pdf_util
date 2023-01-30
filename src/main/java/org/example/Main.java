@@ -22,9 +22,10 @@ public class Main extends JFrame {
     private JLabel pathLabel;
     private JButton selectMergeFolderButton, selectSplitFileButton;
     private JButton mergeSplitButton;
-    private String path;
     private Integer type;
     private JDialog dialog;
+    private List<String> paths;
+    private String folder;
 
     public void jpegToPdf(String inputJpegPath, String outputPdfPath) {
         try {
@@ -92,7 +93,7 @@ public class Main extends JFrame {
         int y = RADIO_BUTTONS_START_Y + RADIO_BUTTONS_HEIGHT;
         this.selectMergeFolderButton.setBounds((WINDOW_WIDTH - SELECT_FOLDER_BUTTON_WIDTH) / 2, y, SELECT_FOLDER_BUTTON_WIDTH, SELECT_FOLDER_BUTTON_HEIGHT);
         this.selectMergeFolderButton.addActionListener((e) -> {
-            selectFolder();
+            selectMultipleFiles();
         });
         this.selectMergeFolderButton.setVisible(this.type != null && this.type == ACTION_TYPE_MERGE);
         this.add(this.selectMergeFolderButton);
@@ -115,11 +116,9 @@ public class Main extends JFrame {
         this.mergeSplitButton.setVisible(false);
         this.add(mergeSplitButton);
         this.mergeSplitButton.addActionListener((e) -> {
-            if (this.path != null) {
-                switch (this.type) {
-                    case ACTION_TYPE_MERGE -> merge(this.path);
-                    case ACTION_TYPE_SPLIT -> split(this.path);
-                }
+            switch (this.type) {
+                case ACTION_TYPE_MERGE -> merge(this.folder, this.paths);
+                case ACTION_TYPE_SPLIT -> split(this.folder);
             }
         });
     }
@@ -147,26 +146,30 @@ public class Main extends JFrame {
         this.setVisible(true);
     }
 
-    public void selectFolder() {
+    public void selectMultipleFiles() {
         JFileChooser chooser = new JFileChooser();
+        chooser.setMultiSelectionEnabled(true);
         chooser.setCurrentDirectory(new File(CHOOSE_FILE_DEFAULT_FOLDER));
-        chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
         int returnVal = chooser.showOpenDialog(new JFrame());
         if(returnVal == JFileChooser.APPROVE_OPTION) {
-            String selectedDir = chooser.getSelectedFile().getAbsolutePath();
-            File[] pdfFiles = getPdfFilesInDir(selectedDir);
-            if (pdfFiles != null) {
-                this.pathLabel.setText(String.format("Files path: %s (%d files)", chooser.getSelectedFile().getAbsolutePath(), pdfFiles.length));
-                this.selectMergeFolderButton.setText("Select Another Folder");
+            File[] selectedFiles = chooser.getSelectedFiles();
+            if (selectedFiles.length > 0) {
+                File[] pdfFiles = filterFiles(selectedFiles);
                 if (pdfFiles.length > 0) {
+                    StringBuilder names = new StringBuilder();
+                    List<String> paths = new ArrayList<>();
+                    for (File file : pdfFiles) {
+                        names.append(file.getName()).append(", ");
+                        paths.add(file.getAbsolutePath());
+                    }
+                    this.pathLabel.setText(String.format("%d files: %s", pdfFiles.length, names.substring(0, names.length() - 2)));
+                    this.selectMergeFolderButton.setText("Select Another Folder");
                     this.mergeSplitButton.setVisible(true);
+                    this.mergeSplitButton.setEnabled(true);
                     this.mergeSplitButton.setText(String.format("Merge %d Files", pdfFiles.length));
-                    this.path = selectedDir;
-                } else {
-                    this.mergeSplitButton.setVisible(false);
+                    this.folder = chooser.getSelectedFile().getParentFile().getPath();
+                    this.paths = paths;
                 }
-            } else {
-                this.mergeSplitButton.setVisible(false);
             }
         }
     }
@@ -179,12 +182,13 @@ public class Main extends JFrame {
         chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
         int returnVal = chooser.showOpenDialog(new JFrame());
         if(returnVal == JFileChooser.APPROVE_OPTION) {
-            this.path = chooser.getSelectedFile().getAbsolutePath();
-            if (!this.path.equals("")) {
+            this.folder = chooser.getSelectedFile().getAbsolutePath();
+            if (!this.folder.equals("")) {
                 this.pathLabel.setText(String.format("File path: %s", chooser.getSelectedFile().getAbsolutePath()));
                 this.selectSplitFileButton.setText("Select Another File");
                 this.mergeSplitButton.setVisible(true);
-                this.mergeSplitButton.setText(String.format("Split %s Into Files", this.path));
+                this.mergeSplitButton.setEnabled(true);
+                this.mergeSplitButton.setText(String.format("Split %s Into Files", this.folder));
             } else {
                 this.mergeSplitButton.setVisible(false);
             }
@@ -207,19 +211,18 @@ public class Main extends JFrame {
         return allFiles;
     }
 
+    private File[] filterFiles (File[] allFiles) {
+        return Arrays.stream(allFiles)
+                .filter(file -> file.getName().endsWith(".pdf") || file.getName().endsWith(".jpeg") || file.getName().endsWith(".jpg"))
+                .toArray(File[]::new);
+    }
+
 
     public static void main(String[] args) {
         new Main();
     }
 
-    public void merge (String dir) {
-        List<String> paths = new ArrayList<>();
-        File[] allFiles = getPdfFilesInDir(dir);
-        if (allFiles != null) {
-            for (File file : allFiles) {
-                paths.add(file.getAbsolutePath());
-            }
-        }
+    public void merge (String dir, List<String> paths) {
         mergePDFs(paths, dir + "\\result");
     }
 
