@@ -177,7 +177,7 @@ public class Main extends JFrame {
     public void selectFile () {
         JFileChooser chooser = new JFileChooser();
         chooser.setCurrentDirectory(new File(CHOOSE_FILE_DEFAULT_FOLDER));
-        FileFilter filter = new FileNameExtensionFilter("PDF Files", "pdf", "jpg", "jpeg");
+        FileFilter filter = new FileNameExtensionFilter("PDF Files", "pdf", "jpg", "jpeg", "png");
         chooser.setFileFilter(filter);
         chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
         int returnVal = chooser.showOpenDialog(new JFrame());
@@ -213,7 +213,7 @@ public class Main extends JFrame {
 
     private File[] filterFiles (File[] allFiles) {
         return Arrays.stream(allFiles)
-                .filter(file -> file.getName().endsWith(".pdf") || file.getName().endsWith(".jpeg") || file.getName().endsWith(".jpg"))
+                .filter(file -> file.getName().endsWith(".pdf") || file.getName().endsWith(".jpeg") || file.getName().endsWith(".jpg") || file.getName().endsWith(".png"))
                 .toArray(File[]::new);
     }
 
@@ -264,7 +264,7 @@ public class Main extends JFrame {
             List<String> tempFiles = new ArrayList<>();
             for (String inputFilePath : inputFilePaths) {
                 if (!checkFileExtension(inputFilePath, "pdf")) {
-                    if (checkFileExtension(inputFilePath, "jpeg") || checkFileExtension(inputFilePath, "jpg")) {
+                    if (checkFileExtension(inputFilePath, "jpeg") || checkFileExtension(inputFilePath, "jpg") || checkFileExtension(inputFilePath, "png")) {
                         String newPath = replaceFileExtension(inputFilePath, ".pdf");
                         jpegToPdf(inputFilePath, newPath);
                         merger.addSource(newPath);
